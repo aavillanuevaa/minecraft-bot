@@ -12,10 +12,9 @@ from requests import get
 
 load_dotenv()
 
-TOKEN = os.getenv('TESTTOKEN')
-
-statusChannel = 1216537851844366456
-notifyChannel = 1228059375491350638
+TOKEN = os.getenv('TOKEN')
+statusChannel = os.getenv('STATUS')
+notifyChannel = os.getenv('NOTIFY')
 
 bot = commands.Bot(command_prefix="/", intents=discord.Intents.all())
 
@@ -62,19 +61,39 @@ def serverSubprocess():
 async def on_ready():
     global ip
     await bot.change_presence(activity=discord.CustomActivity(name='Server is Online'))
-    channel =  bot.get_channel(notifyChannel)
-    await channel.send("@everyone Server is Online")
+    channel =  bot.get_channel(int(notifyChannel))
+    await channel.send("@notifications Server is Online")
     ip = get('https://api.ipify.org').content.decode('utf8')
 
 @bot.command()
 async def server(ctx):
-    if ctx.channel.id == statusChannel:
+    if ctx.channel.id == int(statusChannel):
         embed = discord.Embed(title=":green_circle:  Server Info", color = discord.Color.from_rgb(91,135,49))
         embed.add_field(name="Player Count :busts_in_silhouette:", value=str(playerCount) + "/20", inline = True)
         embed.add_field(name="Version :hammer_and_wrench:", value= version, inline = True)
         embed.add_field(name="Server Adress :placard:", value= ip, inline = True)
         embed.add_field(name="Online Players:", value='\n'.join(curPlayers), inline = False)
         await ctx.send(embed=embed)
+
+@bot.command()
+async def notify(ctx):
+    if ctx.channel.id == int(notifyChannel):
+        author = ctx.message.author
+        guild = ctx.guild
+        rolename = "notifications"
+
+        role = discord.utils.get(guild.roles,name=rolename)
+
+        if role in author.roles:
+            await author.remove_roles(role)
+            await ctx.send("removed from notifications")
+        else:
+            await author.add_roles(role)
+            await ctx.send("added to notifications")
+            
+        
+
+
 
 subprocessThread = threading.Thread(target=serverSubprocess)
 subprocessThread.start()
