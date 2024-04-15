@@ -12,11 +12,11 @@ from requests import get
 
 load_dotenv()
 
-TOKEN = os.getenv('TEST_TOKEN')
-serverChannel = os.getenv('TEST_STATUS')
-notifyChannel = os.getenv('TEST_NOTIFY')
-advChannel = os.getenv('TEST_ADV')
-roleID = os.getenv('TEST_ROLE')
+TOKEN = os.getenv('TOKEN')
+serverChannel = os.getenv('STATUS')
+notifyChannel = os.getenv('NOTIFY')
+advChannel = os.getenv('ADV')
+roleID = os.getenv('ROLE')
 
 bot = commands.Bot(command_prefix="/", intents=discord.Intents.all())
 
@@ -37,18 +37,22 @@ def search(output):
     
     lines = output.split("\r\n")
     for line in lines:
-        advancement = "blank"
+        check = 0
+
+        #look for version
         if "version" in line:
             print(line)
             version = line.split()[-1]
 
+        #look for connection
         elif "joined the game" in line and "<" not in line and ">" not in line:
             playerCount += 1
             line = line.split()
             del line[:3]
             print(line)
             curPlayers.append(line[0])
-
+        
+        #look for disconnection
         elif "left the game" in line and "<" not in line and ">" not in line:
             playerCount -= 1
             line = line.split()
@@ -56,12 +60,15 @@ def search(output):
             print(line)
             curPlayers.remove(line[0])
 
-        elif "the advancement" in line: #and "<" not in line and ">" not in line:
+        #look for advancements
+        elif "the advancement" in line and "<" not in line and ">" not in line:
             line = line.split()
             del line[:3]
             advancement = " ".join(str(x) for x in line)
-            check = 1
             print(advancement)
+            check = 1
+            time.sleep(1)
+            
 
 
 
@@ -118,16 +125,30 @@ async def notify(ctx):
             embed.add_field(name="", value=" :inbox_tray: You have been added to Notifications :inbox_tray: ")
             await ctx.send(embed=embed)
 
-@tasks.loop(seconds=0.5)
+@tasks.loop(seconds=1) #backround loop every 1 second
 async def advance():
     global check
     global advancement
     channel = bot.get_channel(int(advChannel))
     if check == 1:
-        await channel.send(advancement)
-   
+
+        #string editiing
+        advancement = advancement.split()
+        first = advancement[0]
+        del advancement[:1]
+        advancement = " ".join(str(x) for x in advancement)
+
+        #embed setup
+        embed = discord.Embed(title =':medal: New Advancement :medal:',color = discord.Color.from_rgb(241, 196, 15))
+        embed.add_field(name= first, value="")
+        embed.add_field(name= advancement, value = "", inline = True)
+
+        await channel.send(embed=embed)
+
+#start subprocess
 subprocessThread = threading.Thread(target=serverSubprocess)
 subprocessThread.start()
 
+#run bot
 bot.run(TOKEN)
 
