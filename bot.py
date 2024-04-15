@@ -3,7 +3,7 @@ import discord
 import subprocess
 import time
 
-from discord.ext import commands
+from discord.ext import commands, tasks
 import subprocess
 from dotenv import load_dotenv
 import time
@@ -15,7 +15,8 @@ load_dotenv()
 TOKEN = os.getenv('TOKEN')
 statusChannel = os.getenv('STATUS')
 notifyChannel = os.getenv('NOTIFY')
-advChannel = os.getenv('TEST_ADV')
+#advChannel = os.getenv('ADV')
+roleID = os.getenv('ROLE')
 
 bot = commands.Bot(command_prefix="/", intents=discord.Intents.all())
 
@@ -24,6 +25,7 @@ version = ""
 playerCount = 0
 ip = ""
 advancement = ""
+check = 0
 
 def search(output):
     global curPlayers
@@ -31,6 +33,7 @@ def search(output):
     global version
     global playerCount
     global advancement
+    global check
     
     lines = output.split("\r\n")
     for line in lines:
@@ -53,11 +56,12 @@ def search(output):
             print(line)
             curPlayers.remove(line[0])
 
-        """elif "the advancement" in line: #and "<" not in line and ">" not in line:
+        elif "the advancement" in line: #and "<" not in line and ">" not in line:
             line = line.split()
             del line[:3]
             advancement = " ".join(str(x) for x in line)
-            print(advancement)"""
+            check = 1
+            print(advancement)
 
 
 
@@ -74,8 +78,16 @@ async def on_ready():
     global ip
     await bot.change_presence(activity=discord.CustomActivity(name='Server is Online'))
     channel =  bot.get_channel(int(notifyChannel))
-    await channel.send("@notifications Server is Online")
+
+    notification = discord.utils.get(channel.guild.roles, id=int(roleID))
+    embed = discord.Embed(title=":desktop: Server is Online :desktop:", color = discord.Color.from_rgb(91,135,49))
+    embed.add_field(name="", value=f'{notification.mention}')
+    await channel.send(embed=embed)
+
     ip = get('https://api.ipify.org').content.decode('utf8')
+
+    #advance.start()
+    
 
 @bot.command()
 async def server(ctx):
@@ -105,8 +117,17 @@ async def notify(ctx):
             embed = discord.Embed(color = discord.Color.from_rgb(29, 131, 72))
             embed.add_field(name="", value=" :inbox_tray: You have been added to Notifications :inbox_tray: ")
             await ctx.send(embed=embed)
-            
+
+"""@tasks.loop(seconds=2)
+async def advance():
+    global check
+    global advancement
+    channel = bot.get_channel(int(advChannel))
+    if check == 1:
+        await channel.send(advancement)"""
+   
 subprocessThread = threading.Thread(target=serverSubprocess)
 subprocessThread.start()
+
 bot.run(TOKEN)
 
