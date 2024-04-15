@@ -15,6 +15,7 @@ load_dotenv()
 TOKEN = os.getenv('TOKEN')
 statusChannel = os.getenv('STATUS')
 notifyChannel = os.getenv('NOTIFY')
+advChannel = os.getenv('TEST_ADV')
 
 bot = commands.Bot(command_prefix="/", intents=discord.Intents.all())
 
@@ -22,17 +23,20 @@ curPlayers = []
 version = ""
 playerCount = 0
 ip = ""
+advancement = ""
 
 def search(output):
-    global curPlayers 
-    global ip 
-    global version 
-    global playerCount 
-
+    global curPlayers
+    global ip
+    global version
+    global playerCount
+    global advancement
+    
     lines = output.split("\r\n")
     for line in lines:
-        if "version" in line:   
-            print(line) 
+        advancement = "blank"
+        if "version" in line:
+            print(line)
             version = line.split()[-1]
 
         elif "joined the game" in line and "<" not in line and ">" not in line:
@@ -48,6 +52,14 @@ def search(output):
             del line[:3]
             print(line)
             curPlayers.remove(line[0])
+
+        """elif "the advancement" in line: #and "<" not in line and ">" not in line:
+            line = line.split()
+            del line[:3]
+            advancement = " ".join(str(x) for x in line)
+            print(advancement)"""
+
+
 
 def serverSubprocess():
     global version
@@ -81,20 +93,19 @@ async def notify(ctx):
         author = ctx.message.author
         guild = ctx.guild
         rolename = "notifications"
-
         role = discord.utils.get(guild.roles,name=rolename)
 
         if role in author.roles:
             await author.remove_roles(role)
-            await ctx.send("removed from notifications")
+            embed = discord.Embed(color = discord.Color.from_rgb(29, 131, 72))
+            embed.add_field(name="", value=" :outbox_tray: You have been removed from Notifications :outbox_tray: ")
+            await ctx.send(embed=embed)
         else:
             await author.add_roles(role)
-            await ctx.send("added to notifications")
+            embed = discord.Embed(color = discord.Color.from_rgb(29, 131, 72))
+            embed.add_field(name="", value=" :inbox_tray: You have been added to Notifications :inbox_tray: ")
+            await ctx.send(embed=embed)
             
-        
-
-
-
 subprocessThread = threading.Thread(target=serverSubprocess)
 subprocessThread.start()
 bot.run(TOKEN)
