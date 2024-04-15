@@ -12,11 +12,11 @@ from requests import get
 
 load_dotenv()
 
-TOKEN = os.getenv('TOKEN')
-statusChannel = os.getenv('STATUS')
-notifyChannel = os.getenv('NOTIFY')
-#advChannel = os.getenv('ADV')
-roleID = os.getenv('ROLE')
+TOKEN = os.getenv('TEST_TOKEN')
+serverChannel = os.getenv('TEST_STATUS')
+notifyChannel = os.getenv('TEST_NOTIFY')
+advChannel = os.getenv('TEST_ADV')
+roleID = os.getenv('TEST_ROLE')
 
 bot = commands.Bot(command_prefix="/", intents=discord.Intents.all())
 
@@ -86,12 +86,12 @@ async def on_ready():
 
     ip = get('https://api.ipify.org').content.decode('utf8')
 
-    #advance.start()
+    advance.start()
     
 
 @bot.command()
 async def server(ctx):
-    if ctx.channel.id == int(statusChannel):
+    if ctx.channel.id == int(serverChannel):
         embed = discord.Embed(title=":green_circle:  Server Info", color = discord.Color.from_rgb(91,135,49))
         embed.add_field(name="Player Count :busts_in_silhouette:", value=str(playerCount) + "/20", inline = True)
         embed.add_field(name="Version :hammer_and_wrench:", value= version, inline = True)
@@ -101,7 +101,7 @@ async def server(ctx):
 
 @bot.command()
 async def notify(ctx):
-    if ctx.channel.id == int(notifyChannel):
+    if ctx.channel.id == int(serverChannel):
         author = ctx.message.author
         guild = ctx.guild
         rolename = "notifications"
@@ -109,7 +109,7 @@ async def notify(ctx):
 
         if role in author.roles:
             await author.remove_roles(role)
-            embed = discord.Embed(color = discord.Color.from_rgb(29, 131, 72))
+            embed = discord.Embed(color = discord.Color.from_rgb(221, 46, 68))
             embed.add_field(name="", value=" :outbox_tray: You have been removed from Notifications :outbox_tray: ")
             await ctx.send(embed=embed)
         else:
@@ -118,13 +118,13 @@ async def notify(ctx):
             embed.add_field(name="", value=" :inbox_tray: You have been added to Notifications :inbox_tray: ")
             await ctx.send(embed=embed)
 
-"""@tasks.loop(seconds=2)
+@tasks.loop(seconds=0.5)
 async def advance():
     global check
     global advancement
     channel = bot.get_channel(int(advChannel))
     if check == 1:
-        await channel.send(advancement)"""
+        await channel.send(advancement)
    
 subprocessThread = threading.Thread(target=serverSubprocess)
 subprocessThread.start()
