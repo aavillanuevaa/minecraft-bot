@@ -2,14 +2,11 @@ import os
 import discord
 import subprocess
 import time
-import atexit
-import time
 import threading
-import asyncio
+import sys
 
 from collections import deque
 from discord.ext import commands, tasks
-from subprocess import CREATE_NEW_CONSOLE
 from dotenv import load_dotenv
 from requests import get
 
@@ -26,6 +23,8 @@ class Bot:
     chatlog = ""
     discordBot = None
     testing = 0
+    shutdown = 0
+    pid = 0
     # if deque: not empty
     # if not deque: is empty
 
@@ -57,40 +56,40 @@ class Bot:
             if  ("<" in line and ">" in line and self.testing == 0):
                 line = line.split()
                 del line[:3]
+
                 chat =  " ".join(str(x) for x in line)
-                print(chat)
                 self.msgQueue.append(chat)
+                print(chat)
 
             #look for version
             elif "version" in line:
                 line = line.split()
-
-                print(line)
                 self.version = line[-1]
+
+                line =  " ".join(str(x) for x in line)
+                print(line)
             
             #look for connection
             elif "joined the game" in line: 
                 line = line.split()
-                
                 del line[:3]
-                line =  " ".join(str(x) for x in line)
 
-                print(line)
                 self.playerCount += 1
                 self.curPlayers.append(line[0])
+                line =  " ".join(str(x) for x in line)
                 self.msgQueue.append(line)
+                print(line)
             
             #look for disconnection
             elif "left the game" in line:
                 line = line.split()
-                
                 del line[:3]
-                line =  " ".join(str(x) for x in line)
-
-                print(line)
+            
                 self.playerCount -= 1
                 self.curPlayers.remove(line[0])
+                line =  " ".join(str(x) for x in line)
                 self.msgQueue.append(line)
+                print(line)
 
             #look for advancements
             elif "the advancement" in line: 
@@ -124,7 +123,6 @@ class Bot:
     @tasks.loop(seconds=1)
     async def chat(self):
         if not self.msgQueue: return
-
         channel = self.discordBot.get_channel(int(self.chatChannel))
 
         while self.msgQueue: #empty the queue 
@@ -144,7 +142,6 @@ class Bot:
                     await channel.send(embed=embed)
 
 
-
 bot = Bot()
 
 
@@ -152,16 +149,17 @@ bot = Bot()
 def serverSubprocess():
     global bot
     with subprocess.Popen(['startserver.bat'], stdout=subprocess.PIPE) as process:
+        bot.pid = process.pid
         while process.poll() == None:
             output = process.stdout.read1().decode('utf-8')
             
             if bot: bot.search(output) 
             time.sleep(1)
+    
 
 ###### DISCORD STUFF ######
 @bot.discordBot.event
 async def on_ready():
-    #global ip
     global bot
     await bot.discordBot.change_presence(activity=discord.CustomActivity(name='Server is Online'))
     channel =  bot.discordBot.get_channel(int(bot.notifyChannel))
@@ -204,12 +202,27 @@ async def notify(ctx):
             embed.add_field(name="", value=" :inbox_tray: You have been added to Notifications :inbox_tray: ")
             await ctx.send(embed=embed)
 
+@bot.discordBot.command()
+async def shutdown(ctx):
+    if await is_owner(ctx):
+        if ctx.channel.id == int(bot.serverChannel):
+            channel = bot.discordBot.get_channel(int(bot.notifyChannel))
+            
+            embed = discord.Embed(title=":red_circle: Server is Offline :red_circle:", color = discord.Color.from_rgb(255,0,0))
+            await channel.send(embed=embed)
+
+            subprocess.Popen(['TASKKILL', '/F', '/T', '/PID', str(bot.pid)]) #kill subprocess command
+            print("shutting down")
+            await bot.discordBot.change_presence(status=discord.Status.invisible)
+            sys.exit()
+        
+
+async def is_owner(ctx):
+    if ctx.author.id == 573239067920171018:
+        return True
+
 #start subprocess
 subprocessThread = threading.Thread(target=serverSubprocess)
+subprocessThread.daemon = True
 subprocessThread.start()
-
 bot.start()
-
-
-atexit.register(exit_handler)
-
